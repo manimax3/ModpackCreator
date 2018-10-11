@@ -65,11 +65,8 @@ std::list<CurseMetaMod> ModFinder::GetFoundMods()
 {
     std::list<CurseMetaMod> mods;
 
-    for (const auto &data : data_cache) {
-        const auto search_data = ParseSearchSite(data);
-        for (const auto &search : search_data) {
-            mods.push_back(ConvertToMetaMod(search));
-        }
+    for (const auto &search : data_cache) {
+        mods.push_back(ConvertToMetaMod(search));
     }
 
     // Remove invalids mods
@@ -106,20 +103,16 @@ void ModFinder::DownloadSearchSite()
     QNetworkRequest request(QUrl(final_url.c_str()));
     request.setSslConfiguration(QSslConfiguration::defaultConfiguration());
 
-    // We wait for this request to be finished
-    // TODO: This is so stupid
-    QEventLoop pause;
-
+    QObject::disconnect(&networkmanager, &QNetworkAccessManager::finished, this,
+                        nullptr);
     QObject::connect(&networkmanager, &QNetworkAccessManager::finished, this,
                      [&](QNetworkReply *rep) {
                          std::string data(rep->readAll());
-                         data_cache.push_back(std::move(data));
-                         pause.quit();
+                         ParseSearchSite(data);
+                         rep->deleteLater();
                      });
 
     networkmanager.get(request);
-
-    pause.exec();
 }
 
 void ModFinder::ParseSearchSite(const std::string &data)
@@ -192,6 +185,8 @@ void ModFinder::ParseSearchSite(const std::string &data)
     if (elements.size() != 1) {
         qCritical() << "Couldnt parse the search results correctly. Found "
                        "results for valid tables are not equal to 1";
+        emit SearchParseFinished();
+        return;
     }
 
     const auto table_body = elements.front()->FirstChildElement("tbody");
@@ -202,6 +197,9 @@ void ModFinder::ParseSearchSite(const std::string &data)
         if (std::string_view(result->Attribute("class")) != "results")
             continue;
 
+        const auto img_icon = result->FirstChildElement("td")
+                                  ->FirstChildElement("a")
+                                  ->FirstChildElement("img");
         const auto td
             = result->FirstChildElement("td")->NextSiblingElement("td");
         const auto div1 = td->FirstChildElement("div");
@@ -222,16 +220,28 @@ void ModFinder::ParseSearchSite(const std::string &data)
         // TODO: Maybe more checking here
 
         const auto  namelink = div1->FirstChildElement("a");
-        std::string projectname(namelink->GetText());
+        std::string projectname(
+            *namelink->GetText() == '\n'
+                ? namelink->GetText() + 1
+                : namelink->GetText()); // Some names start with a newline. Just
+                                        // remove it.
         std::string projecturl(namelink->Attribute("href"));
         std::string summary(div2->GetText());
+        std::string iconurl(
+            img_icon
+                ? (img_icon->Attribute("src") ? img_icon->Attribute("src") : "")
+                : "");
 
         SearchData data{ std::move(projectname), std::move(projecturl),
-                         std::move(summary) };
+                         std::move(iconurl), std::move(summary) };
 
-        if (SimpleCheckIsMod(data))
+        if (SimpleCheckIsMod(data)) {
             emit FoundSearchData(data);
+            data_cache.push_back(std::move(data));
+        }
     }
+
+    emit SearchParseFinished();
 }
 
 CurseMetaMod ModFinder::ConvertToMetaMod(const SearchData &object)
@@ -239,6 +249,7 @@ CurseMetaMod ModFinder::ConvertToMetaMod(const SearchData &object)
     CurseMetaMod mod;
     mod.addonname   = object.projectname;
     mod.description = object.summary;
+    mod.iconurl     = object.iconurl;
 
     auto projectid = object.projecturl.find("projectID");
 
@@ -256,7 +267,7 @@ CurseMetaMod ModFinder::ConvertToMetaMod(const SearchData &object)
 
 bool ModFinder::SimpleCheckIsMod(const SearchData &data)
 {
-    const auto& url = data.projecturl;
-    const auto& pos = url.find("gameCategorySlug=mc-mods");
+    const auto &url = data.projecturl;
+    const auto &pos = url.find("gameCategorySlug=mc-mods");
     return pos != std::string::npos;
 }

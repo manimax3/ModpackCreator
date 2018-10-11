@@ -1,4 +1,6 @@
 #pragma once
+#include "modfinder.h"
+
 #include <QDialog>
 #include <string>
 
@@ -16,7 +18,9 @@ public:
 
 public slots:
     void Search();
+    void AddFoundMond(const ModFinder::SearchData &data);
 
 private:
     Ui::SearchModsDialog *ui;
+    ModFinder *finder;
 };

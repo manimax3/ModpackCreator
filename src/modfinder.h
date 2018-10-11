@@ -12,6 +12,7 @@ public:
     struct SearchData {
         std::string projectname;
         std::string projecturl;
+        std::string iconurl;
         std::string summary;
     };
 
@@ -25,12 +26,13 @@ public:
 
 signals:
     void FoundSearchData(const SearchData &data);
+    void SearchParseFinished();
 
 private:
     void         DownloadSearchSite();
     void         ParseSearchSite(const std::string &data);
     CurseMetaMod ConvertToMetaMod(const SearchData &object);
 
-    std::string            search, gameversion;
-    std::list<std::string> data_cache;
+    std::string           search, gameversion;
+    std::list<SearchData> data_cache;
 };

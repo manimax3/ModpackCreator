@@ -21,7 +21,7 @@ void cursemeta_resolve(CurseMetaMod &mod)
     QEventLoop     pause;
     QNetworkReply *reply = nullptr;
 
-    QObject::connect(&networkmanager, &QNetworkAccessManager::finished,
+    auto conn = QObject::connect(&networkmanager, &QNetworkAccessManager::finished,
                      [&](QNetworkReply *r) {
                          reply = r;
                          pause.quit();
@@ -29,6 +29,7 @@ void cursemeta_resolve(CurseMetaMod &mod)
 
     networkmanager.get(request);
     pause.exec();
+    QObject::disconnect(conn);
 
     if (!reply) {
         mod.modvalid = false;

@@ -11,6 +11,7 @@ struct CurseMetaMod {
     int               addonid;
     std::list<FileId> fileids;
     std::string       description;
+    std::string       iconurl;
 
     bool modvalid = false;
 };
