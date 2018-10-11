@@ -49,7 +49,7 @@ private:
 
 ModFinder::ModFinder(const std::string &search)
     : search(search)
-    , gameversion("unsepcified")
+    , gameversion("unspecified")
 {
 }
 
@@ -69,6 +69,23 @@ std::list<CurseMetaMod> ModFinder::GetFoundMods()
         const auto search_data = ParseSearchSite(data);
         for (const auto &search : search_data) {
             mods.push_back(ConvertToMetaMod(search));
+        }
+    }
+
+    // Remove invalids mods
+    mods.erase(std::remove_if(std::begin(mods), std::end(mods),
+                              [](const auto &mod) { return !mod.modvalid; }),
+               std::end(mods));
+
+    if (gameversion != "unspecified") {
+        for (auto &mod : mods) {
+            mod.fileids.erase(
+                std::remove_if(std::begin(mod.fileids), std::end(mod.fileids),
+                               [&](const auto &file) {
+                                   const auto &[id, version] = file;
+                                   return version != this->gameversion;
+                               }),
+                std::end(mod.fileids));
         }
     }
 
@@ -105,8 +122,7 @@ void ModFinder::DownloadSearchSite()
     pause.exec();
 }
 
-std::list<ModFinder::SearchData>
-ModFinder::ParseSearchSite(const std::string &data)
+void ModFinder::ParseSearchSite(const std::string &data)
 {
     using namespace tinyxml2;
 
@@ -176,7 +192,6 @@ ModFinder::ParseSearchSite(const std::string &data)
     if (elements.size() != 1) {
         qCritical() << "Couldnt parse the search results correctly. Found "
                        "results for valid tables are not equal to 1";
-        return {};
     }
 
     const auto table_body = elements.front()->FirstChildElement("tbody");
@@ -214,10 +229,9 @@ ModFinder::ParseSearchSite(const std::string &data)
         SearchData data{ std::move(projectname), std::move(projecturl),
                          std::move(summary) };
 
-        foundaddons.push_back(std::move(data));
+        if (SimpleCheckIsMod(data))
+            emit FoundSearchData(data);
     }
-
-    return foundaddons;
 }
 
 CurseMetaMod ModFinder::ConvertToMetaMod(const SearchData &object)
@@ -238,4 +252,11 @@ CurseMetaMod ModFinder::ConvertToMetaMod(const SearchData &object)
     cursemeta_resolve(mod);
 
     return mod;
+}
+
+bool ModFinder::SimpleCheckIsMod(const SearchData &data)
+{
+    const auto& url = data.projecturl;
+    const auto& pos = url.find("gameCategorySlug=mc-mods");
+    return pos != std::string::npos;
 }

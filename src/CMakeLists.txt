@@ -1,5 +1,5 @@
-set(UI_FILES mainwindow.ui)
-set(SRC_FILES main.cpp mainwindow.cpp modfinder.cpp tinyxml2.cpp)
+set(UI_FILES mainwindow.ui searchModsDialog.ui)
+set(SRC_FILES main.cpp mainwindow.cpp modfinder.cpp tinyxml2.cpp cursemeta.cpp searchModsDialog.cpp)
 
 qt5_wrap_ui(UI_HEADERS ${UI_FILES})
 qt5_add_resources(RESOURCE_FILES ../resources/resources.qrc)

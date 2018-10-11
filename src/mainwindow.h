@@ -1,6 +1,8 @@
 #pragma onc
 #include <QMainWindow>
 
+#include "searchModsDialog.h"
+
 namespace Ui {
 class MainWindow;
 }
@@ -17,5 +19,6 @@ public slots:
     void OpenModpack(const QString &path);
 
 private:
-    Ui::MainWindow *ui;
+    Ui::MainWindow *  ui;
+    SearchModsDialog *searchModsDialog;
 };

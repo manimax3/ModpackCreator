@@ -9,15 +9,10 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    searchModsDialog = new SearchModsDialog(this);
 
-    connect(ui->addModButton, &QPushButton::pressed, this, [&]() {
-        ModFinder *finder = new ModFinder("immersive");
-        finder->PerformSearch();
-        const auto mods = finder->GetFoundMods();
-        for (const auto &mod : mods) {
-            qDebug() << mod.addonname.c_str();
-        }
-    });
+    connect(ui->addModButton, &QPushButton::pressed, this,
+            [&]() { searchModsDialog->show(); });
 }
 
 void MainWindow::OpenModpack(const QString &path)
