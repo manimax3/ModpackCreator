@@ -2,6 +2,7 @@
 #include "cursemeta.h"
 
 #include <QObject>
+#include <optional>
 #include <string>
 
 class ModFinder : public QObject {
@@ -21,6 +22,8 @@ public:
 
     void                    PerformSearch(int level = 0);
     std::list<CurseMetaMod> GetFoundMods();
+    static CurseMetaMod     GetCurseMod(const SearchData &         data,
+                                        std::optional<std::string> version = {});
 
     static bool SimpleCheckIsMod(const SearchData &data);
 
@@ -29,9 +32,9 @@ signals:
     void SearchParseFinished();
 
 private:
-    void         DownloadSearchSite();
-    void         ParseSearchSite(const std::string &data);
-    CurseMetaMod ConvertToMetaMod(const SearchData &object);
+    void                DownloadSearchSite();
+    void                ParseSearchSite(const std::string &data);
+    static CurseMetaMod ConvertToMetaMod(const SearchData &object);
 
     std::string           search, gameversion;
     std::list<SearchData> data_cache;

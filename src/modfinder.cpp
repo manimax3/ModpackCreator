@@ -89,6 +89,27 @@ std::list<CurseMetaMod> ModFinder::GetFoundMods()
     return mods;
 }
 
+CurseMetaMod ModFinder::GetCurseMod(const SearchData &         data,
+                                    std::optional<std::string> gameversion)
+{
+    CurseMetaMod mod = ConvertToMetaMod(data);
+
+    if (!mod.modvalid)
+        return {};
+
+    if (gameversion) {
+        mod.fileids.erase(
+            std::remove_if(std::begin(mod.fileids), std::end(mod.fileids),
+                           [&](const auto &file) {
+                               const auto &[id, version] = file;
+                               return version != gameversion.value();
+                           }),
+            std::end(mod.fileids));
+    }
+
+    return mod;
+}
+
 void ModFinder::DownloadSearchSite()
 {
     if (search.length() == 0)

@@ -16,6 +16,9 @@ public:
     explicit SearchModsDialog(QWidget *parent = nullptr);
     ~SearchModsDialog();
 
+signals:
+    void ModsExport(std::list<CurseMetaMod> mods);
+
 public slots:
     void Search();
     void AddFoundMond(const ModFinder::SearchData &data);
@@ -23,4 +26,6 @@ public slots:
 private:
     Ui::SearchModsDialog *ui;
     ModFinder *finder;
+
+    void HandleAddModsRequest();
 };
