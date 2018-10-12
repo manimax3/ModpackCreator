@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "modfinder.h"
+#include "modlistwidgetitem.h"
 #include "ui_mainwindow.h"
 
 #include <QDebug>
@@ -14,7 +15,7 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    searchModsDialog = new SearchModsDialog(this);
+    searchModsDialog    = new SearchModsDialog(this);
     createModpackDialog = new CreateModpackDialog(this);
 
     connect(ui->addModButton, &QPushButton::pressed, this,
@@ -25,6 +26,20 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->actionCreate_New, &QAction::triggered, this,
             &MainWindow::CreateModpack);
+
+    connect(createModpackDialog, &CreateModpackDialog::ModpackCreated, this,
+            [this](const Modpack &modpack) { currentModpack = modpack; });
+
+    connect(searchModsDialog, &SearchModsDialog::ModsExport, this,
+            [this](std::list<CurseMetaMod> mods) {
+                currentModpack.mods.insert(std::end(currentModpack.mods),
+                                           std::begin(mods), std::end(mods));
+
+                for (const auto &mod : mods) {
+                    ui->listWidget->addItem(
+                        new ModListWidgetItem(mod, ui->listWidget));
+                }
+            });
 }
 
 void MainWindow::OpenModpack()
@@ -36,24 +51,22 @@ void MainWindow::OpenModpack()
         return;
 
     QFile file(result);
-    json j;
+    json  j;
     try {
         j = json::parse(file.readAll());
     } catch (const json::parse_error &e) {
-        qWarning() << "Not a valid project file";    
+        qWarning() << "Not a valid project file";
         return;
     }
 
     try {
         j.get_to(currentModpack);
     } catch (const json::parse_error &e) {
-       qCritical() << "Couldnt parse the modpack file"; 
-       return;
+        qCritical() << "Couldnt parse the modpack file";
+        return;
     }
 }
 
 MainWindow::~MainWindow() { delete ui; }
 
-void MainWindow::CreateModpack() {
-    createModpackDialog->show();
-}
+void MainWindow::CreateModpack() { createModpackDialog->show(); }

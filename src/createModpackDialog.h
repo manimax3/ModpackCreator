@@ -19,8 +19,7 @@ signals:
     void ModpackCreated(Modpack modpack);
 
 private slots:
-    void OkPressed() {}
-    void CancelPressed() {}
+    void OkPressed(); 
 
     void McVersionSelected(const QString &version);
     void McVersionFound(const CurseMetaMcVersion &version);

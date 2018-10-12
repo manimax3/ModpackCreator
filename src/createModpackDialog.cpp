@@ -17,6 +17,9 @@ CreateModpackDialog::CreateModpackDialog(QWidget *parent)
             QOverload<const QString &>::of(&QComboBox::currentTextChanged),
             this, &CreateModpackDialog::McVersionSelected);
 
+    connect(ui->buttonBox, &QDialogButtonBox::accepted, this,
+            &CreateModpackDialog::OkPressed);
+
     mcVersionFinder->StartSearching();
 }
 
@@ -42,12 +45,35 @@ void CreateModpackDialog::McVersionSelected(const QString &version)
 
         if (v.recommended)
             ui->forgeVersionSelect->insertItem(
-                0, (v.name + " (recommended)").c_str());
+                0, (v.name + " (recommended)").c_str(),
+                QVariant(QString(v.name.c_str())));
         else
-            ui->forgeVersionSelect->addItem(v.name.c_str());
+            ui->forgeVersionSelect->addItem(v.name.c_str(),
+                                            QVariant(QString(v.name.c_str())));
     }
 
     ui->forgeVersionSelect->setCurrentIndex(0);
+}
+
+void CreateModpackDialog::OkPressed() {
+    const auto author    = ui->authorEdit->text();
+    const auto name      = ui->nameEdit->text();
+    const auto version   = ui->versionEdit->text();
+    const auto mcversion = ui->mcVersionSelect->currentText();
+    const auto fversion  = ui->forgeVersionSelect->currentData().toString();
+
+    if (author.isEmpty() || name.isEmpty() || version.isEmpty())
+        // TODO: Maybe we should let the user know
+        return;
+
+    Modpack modpack;
+    modpack.author       = author.toStdString();
+    modpack.name         = name.toStdString();
+    modpack.version      = version.toStdString();
+    modpack.mcversion    = mcversion.toStdString();
+    modpack.forgeversion = fversion.toStdString();
+
+    emit ModpackCreated(modpack);
 }
 
 CreateModpackDialog::~CreateModpackDialog()
