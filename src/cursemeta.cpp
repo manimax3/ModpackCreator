@@ -1,4 +1,5 @@
 #include "cursemeta.h"
+#include "networkhelper.h"
 
 #include <QEventLoop>
 #include <QNetworkAccessManager>
@@ -17,17 +18,16 @@ McVersionFinder::~McVersionFinder() {}
 
 void McVersionFinder::StartSearching()
 {
-
-    static QNetworkAccessManager networkmanager;
-    static const std::string     VERSIONS_API
+    auto &                   networkmanager = GetNetworkManager();
+    static const std::string VERSIONS_API
         = "https://staging_cursemeta.dries007.net/api/v3/direct/minecraft/"
           "version";
     static const std::string FORGE_VERSIONS_API
         = "https://staging_cursemeta.dries007.net/api/v3/direct/minecraft/"
           "modloader";
 
-    QNetworkRequest request(QUrl(VERSIONS_API.c_str()));
-    request.setSslConfiguration(QSslConfiguration::defaultConfiguration());
+    auto request = GetDefaultRequest(QUrl(VERSIONS_API.c_str()));
+
     mcconn = connect(&networkmanager, &QNetworkAccessManager::finished, this,
                      &McVersionFinder::RequestFinished);
 
@@ -44,11 +44,19 @@ void McVersionFinder::StartSearching()
 
 void McVersionFinder::RequestFinished(QNetworkReply *reply)
 {
-    if (!reply)
+    if (!(reply->property("mcversion").isValid()
+          || reply->property("forgeversion").isValid()))
         return;
 
-    // TODO: Might fail
-    json j = json::parse(reply->readAll());
+    json j;
+
+    try {
+        j = json::parse(reply->readAll());
+    } catch (const json::parse_error &e) {
+        qCritical()
+            << "Couldnt download minecraft or forge version information";
+        return;
+    }
 
     if (reply->property("mcversion").isValid()) {
         for (auto &v : j) {
@@ -75,25 +83,28 @@ void McVersionFinder::RequestFinished(QNetworkReply *reply)
 
 void cursemeta_resolve(CurseMetaMod &mod)
 {
-    static QNetworkAccessManager networkmanager;
-    static const std::string     ADDON_SEARCH_URL
+    auto &                   networkmanager = GetNetworkManager();
+    static const std::string ADDON_SEARCH_URL
         = "https://staging_cursemeta.dries007.net/api/v3/direct/addon/";
 
     const std::string url(ADDON_SEARCH_URL + std::to_string(mod.addonid));
-    QNetworkRequest   request(QUrl(url.c_str()));
-    request.setSslConfiguration(QSslConfiguration::defaultConfiguration());
+    const auto        request = GetDefaultRequest(url);
 
     QEventLoop     pause;
     QNetworkReply *reply = nullptr;
 
-    auto conn
-        = QObject::connect(&networkmanager, &QNetworkAccessManager::finished,
-                           [&](QNetworkReply *r) {
-                               reply = r;
-                               pause.quit();
-                           });
+    auto conn = QObject::connect(
+        &networkmanager, &QNetworkAccessManager::finished,
+        [&](QNetworkReply *r) {
+            if (!(r->property("cursemeta_resolve").isValid()))
+                return;
+            reply = r;
+            pause.quit();
+        });
 
-    networkmanager.get(request);
+    auto *r = networkmanager.get(request);
+    r->setProperty("cursemeta_resolve", QVariant(true));
+
     pause.exec();
     QObject::disconnect(conn);
 
@@ -130,29 +141,30 @@ void cursemeta_resolve(CurseMetaMod &mod)
 
 std::list<int> cursemeta_file_dependencies(int addonid, int fileid)
 {
-    static QNetworkAccessManager networkmanager;
+    auto &               networkmanager = GetNetworkManager();
     static const QString API("https://staging_cursemeta.dries007.net/api/v3/"
                              "direct/addon/%1/file/%2");
-    const auto           strUrl = API.arg(addonid).arg(fileid);
-
-    QNetworkRequest request((QUrl(strUrl)));
-    request.setSslConfiguration(QSslConfiguration::defaultConfiguration());
+    const auto           strUrl  = API.arg(addonid).arg(fileid);
+    auto                 request = GetDefaultRequest(strUrl);
 
     QEventLoop     pause;
     std::list<int> addonids;
 
-    auto connection
-        = QObject::connect(&networkmanager, &QNetworkAccessManager::finished,
-                           [&](QNetworkReply *reply) {
-                               json j = json::parse(reply->readAll());
-                               for (const auto &d : j["dependencies"]) {
-                                   addonids.push_back(d["addonId"].get<int>());
-                               }
-                               reply->deleteLater();
-                               pause.quit();
-                           });
+    auto connection = QObject::connect(
+        &networkmanager, &QNetworkAccessManager::finished,
+        [&](QNetworkReply *reply) {
+            if (!(reply->property("cursemeta_file_dependencies").isValid()))
+                return;
+            json j = json::parse(reply->readAll());
+            for (const auto &d : j["dependencies"]) {
+                addonids.push_back(d["addonId"].get<int>());
+            }
+            reply->deleteLater();
+            pause.quit();
+        });
 
-    networkmanager.get(request);
+    networkmanager.get(request)->setProperty("cursemeta_file_dependencies",
+                                             QVariant(true));
     pause.exec();
     QObject::disconnect(connection);
 

@@ -1,4 +1,5 @@
 #include "modfinder.h"
+#include "networkhelper.h"
 
 #include <QEventLoop>
 #include <QNetworkAccessManager>
@@ -115,25 +116,26 @@ void ModFinder::DownloadSearchSite()
     if (search.length() == 0)
         return;
 
-    static QNetworkAccessManager networkmanager;
+    auto& networkmanager = GetNetworkManager();
     static const std::string     SEARCH_URL
         = "https://minecraft.curseforge.com/search?search=";
 
     const std::string final_url = SEARCH_URL + search;
-
-    QNetworkRequest request(QUrl(final_url.c_str()));
-    request.setSslConfiguration(QSslConfiguration::defaultConfiguration());
+    const auto        request   = GetDefaultRequest(final_url);
 
     QObject::disconnect(&networkmanager, &QNetworkAccessManager::finished, this,
                         nullptr);
     QObject::connect(&networkmanager, &QNetworkAccessManager::finished, this,
                      [&](QNetworkReply *rep) {
+                         if (!(rep->property("DownloadSearchSite").isValid()))
+                             return;
+
                          std::string data(rep->readAll());
                          ParseSearchSite(data);
                          rep->deleteLater();
                      });
 
-    networkmanager.get(request);
+    networkmanager.get(request)->setProperty("DownloadSearchSite", QVariant(true));
 }
 
 void ModFinder::ParseSearchSite(const std::string &data)

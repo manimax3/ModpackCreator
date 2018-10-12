@@ -15,6 +15,8 @@ public:
     explicit CreateModpackDialog(QWidget *parent = nullptr);
     ~CreateModpackDialog();
 
+    void showEvent(QShowEvent*) override;
+
 signals:
     void ModpackCreated(Modpack modpack);
 
@@ -29,4 +31,5 @@ private:
     Ui::CreateModpackDialog * ui;
     McVersionFinder *         mcVersionFinder;
     std::list<CurseMetaForge> forgeVersions;
+    bool                      hasSearched = false;
 };

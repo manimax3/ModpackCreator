@@ -19,7 +19,15 @@ CreateModpackDialog::CreateModpackDialog(QWidget *parent)
 
     connect(ui->buttonBox, &QDialogButtonBox::accepted, this,
             &CreateModpackDialog::OkPressed);
+}
 
+void CreateModpackDialog::showEvent(QShowEvent* e) {
+    QDialog::showEvent(e);
+
+    if (hasSearched)
+        return;
+
+    hasSearched = true;
     mcVersionFinder->StartSearching();
 }
 
