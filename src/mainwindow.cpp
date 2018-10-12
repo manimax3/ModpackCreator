@@ -5,6 +5,7 @@
 
 #include <QDebug>
 #include <QFileDialog>
+#include <fstream>
 
 #include "nlohmann/json.hpp"
 
@@ -27,17 +28,23 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionCreate_New, &QAction::triggered, this,
             &MainWindow::CreateModpack);
 
+    connect(ui->actionSave, &QAction::triggered, this,
+            &MainWindow::SaveModpack);
+
     connect(createModpackDialog, &CreateModpackDialog::ModpackCreated, this,
             [this](const Modpack &modpack) { currentModpack = modpack; });
 
     connect(searchModsDialog, &SearchModsDialog::ModsExport, this,
             [this](std::list<CurseMetaMod> mods) {
-                currentModpack.mods.insert(std::end(currentModpack.mods),
-                                           std::begin(mods), std::end(mods));
+                for (const auto &m : mods) {
+                    currentModpack.AddMod(m);
+                }
 
-                for (const auto &mod : mods) {
+                ui->listWidget->clear();
+
+                for (const auto &m : currentModpack.GetMods()) {
                     ui->listWidget->addItem(
-                        new ModListWidgetItem(mod, ui->listWidget));
+                        new ModListWidgetItem(m, ui->listWidget));
                 }
             });
 }
@@ -67,6 +74,18 @@ void MainWindow::OpenModpack()
     }
 }
 
-MainWindow::~MainWindow() { delete ui; }
+MainWindow::~MainWindow()
+{
+    delete ui;
+    delete searchModsDialog;
+    delete createModpackDialog;
+}
 
 void MainWindow::CreateModpack() { createModpackDialog->show(); }
+
+void MainWindow::SaveModpack()
+{
+    std::ofstream of(FILE_NAME);
+    json          j = currentModpack;
+    of << j;
+}

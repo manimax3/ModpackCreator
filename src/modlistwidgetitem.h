@@ -58,15 +58,11 @@ public:
     }
 
     ModListWidgetItem(const CurseMetaMod &mod, QListWidget *parent = nullptr)
-        : QListWidgetItem(mod.addonname.c_str(), parent)
+        : ModListWidgetItem(ModFinder::SearchData{ mod.addonname, "",
+                                                   mod.iconurl,
+                                                   mod.description },
+                            parent)
     {
-        setToolTip(mod.description.c_str());
-        if (IconCache::Get().HasIcon(mod.iconurl)) {
-            setIcon(IconCache::Get().GetIcon(mod.iconurl));
-        }
-        // TODO: MAybe also load the icons from the web if they havent been
-        // chached
-        //       Neeeded for deserializing a modpack
     }
 
     ModFinder::SearchData data;

@@ -128,6 +128,37 @@ void cursemeta_resolve(CurseMetaMod &mod)
     }
 }
 
+std::list<int> cursemeta_file_dependencies(int addonid, int fileid)
+{
+    static QNetworkAccessManager networkmanager;
+    static const QString API("https://staging_cursemeta.dries007.net/api/v3/"
+                             "direct/addon/%1/file/%2");
+    const auto           strUrl = API.arg(addonid).arg(fileid);
+
+    QNetworkRequest request((QUrl(strUrl)));
+    request.setSslConfiguration(QSslConfiguration::defaultConfiguration());
+
+    QEventLoop     pause;
+    std::list<int> addonids;
+
+    auto connection
+        = QObject::connect(&networkmanager, &QNetworkAccessManager::finished,
+                           [&](QNetworkReply *reply) {
+                               json j = json::parse(reply->readAll());
+                               for (const auto &d : j["dependencies"]) {
+                                   addonids.push_back(d["addonId"].get<int>());
+                               }
+                               reply->deleteLater();
+                               pause.quit();
+                           });
+
+    networkmanager.get(request);
+    pause.exec();
+    QObject::disconnect(connection);
+
+    return addonids;
+}
+
 void to_json(nlohmann::json &j, const CurseMetaMod &mod)
 {
     j                = json();

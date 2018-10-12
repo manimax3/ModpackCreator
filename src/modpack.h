@@ -9,9 +9,17 @@ struct Modpack {
     std::string version;
     std::string forgeversion;
 
-    std::list<CurseMetaMod> mods;
-
     nlohmann::json ExportInCurseFormat() const;
+
+    bool AddMod(const CurseMetaMod &mod);
+    bool HasMod(int addonid) const;
+    const std::list<CurseMetaMod> &GetMods() const { return mods; };
+
+    friend void to_json(nlohmann::json &j, const Modpack &modpack);
+    friend void from_json(const nlohmann::json &j, Modpack &modpack);
+
+private:
+    std::list<CurseMetaMod> mods;
 };
 
 void to_json(nlohmann::json &j, const Modpack &modpack);

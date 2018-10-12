@@ -24,7 +24,7 @@ public slots:
     void ImportModpack() {}
     void CreateModpack();
     void ExportModpack() {}
-    void SaveModpack() {}
+    void SaveModpack(); 
 
 private:
     Ui::MainWindow *     ui;

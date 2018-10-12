@@ -54,7 +54,8 @@ private:
     QMetaObject::Connection forgeconn;
 };
 
-void cursemeta_resolve(CurseMetaMod &mod);
+void           cursemeta_resolve(CurseMetaMod &mod);
+std::list<int> cursemeta_file_dependencies(int addonid, int fileid);
 
 void to_json(nlohmann::json &j, const CurseMetaMod &mod);
 void from_json(const nlohmann::json &j, CurseMetaMod &mod);
