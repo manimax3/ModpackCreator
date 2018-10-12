@@ -124,8 +124,10 @@
     </property>
     <addaction name="actionCreate_New"/>
     <addaction name="actionLoad"/>
+    <addaction name="actionSave"/>
     <addaction name="separator"/>
     <addaction name="actionExport"/>
+    <addaction name="actionImport"/>
    </widget>
    <addaction name="menuModpack"/>
   </widget>
@@ -141,7 +143,17 @@
   </action>
   <action name="actionExport">
    <property name="text">
-    <string>Export</string>
+    <string>&amp;Export</string>
+   </property>
+  </action>
+  <action name="actionSave">
+   <property name="text">
+    <string>Save</string>
+   </property>
+  </action>
+  <action name="actionImport">
+   <property name="text">
+    <string>Import</string>
    </property>
   </action>
  </widget>

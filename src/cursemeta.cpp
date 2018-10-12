@@ -8,6 +8,71 @@
 
 using json = nlohmann::json;
 
+McVersionFinder::McVersionFinder(QObject *parent)
+    : QObject(parent)
+{
+}
+
+McVersionFinder::~McVersionFinder() {}
+
+void McVersionFinder::StartSearching()
+{
+
+    static QNetworkAccessManager networkmanager;
+    static const std::string     VERSIONS_API
+        = "https://staging_cursemeta.dries007.net/api/v3/direct/minecraft/"
+          "version";
+    static const std::string FORGE_VERSIONS_API
+        = "https://staging_cursemeta.dries007.net/api/v3/direct/minecraft/"
+          "modloader";
+
+    QNetworkRequest request(QUrl(VERSIONS_API.c_str()));
+    request.setSslConfiguration(QSslConfiguration::defaultConfiguration());
+    mcconn = connect(&networkmanager, &QNetworkAccessManager::finished, this,
+                     &McVersionFinder::RequestFinished);
+
+    forgeconn = connect(&networkmanager, &QNetworkAccessManager::finished, this,
+                        &McVersionFinder::RequestFinished);
+
+    auto *mcrep = networkmanager.get(request);
+    mcrep->setProperty("mcversion", QVariant(true));
+
+    request.setUrl(QUrl(FORGE_VERSIONS_API.c_str()));
+    auto *forgerep = networkmanager.get(request);
+    forgerep->setProperty("forgeversion", QVariant(true));
+}
+
+void McVersionFinder::RequestFinished(QNetworkReply *reply)
+{
+    if (!reply)
+        return;
+
+    // TODO: Might fail
+    json j = json::parse(reply->readAll());
+
+    if (reply->property("mcversion").isValid()) {
+        for (auto &v : j) {
+            CurseMetaMcVersion version;
+            v.get_to(version);
+            emit McVersionFound(version);
+        }
+        disconnect(mcconn);
+    }
+
+    if (reply->property("forgeversion").isValid()) {
+
+        for (auto &v : j) {
+            CurseMetaForge forge;
+            v.get_to(forge);
+            emit ForgeVersionFound(forge);
+        }
+
+        disconnect(forgeconn);
+    }
+
+    reply->deleteLater();
+}
+
 void cursemeta_resolve(CurseMetaMod &mod)
 {
     static QNetworkAccessManager networkmanager;
@@ -21,11 +86,12 @@ void cursemeta_resolve(CurseMetaMod &mod)
     QEventLoop     pause;
     QNetworkReply *reply = nullptr;
 
-    auto conn = QObject::connect(&networkmanager, &QNetworkAccessManager::finished,
-                     [&](QNetworkReply *r) {
-                         reply = r;
-                         pause.quit();
-                     });
+    auto conn
+        = QObject::connect(&networkmanager, &QNetworkAccessManager::finished,
+                           [&](QNetworkReply *r) {
+                               reply = r;
+                               pause.quit();
+                           });
 
     networkmanager.get(request);
     pause.exec();
@@ -60,4 +126,41 @@ void cursemeta_resolve(CurseMetaMod &mod)
             << "Couldnt resolve a mod because of missing fields. Skipping...";
         mod.modvalid = false;
     }
+}
+
+void to_json(nlohmann::json &j, const CurseMetaMod &mod)
+{
+    j                = json();
+    j["addonname"]   = mod.addonname;
+    j["addonid"]     = mod.addonid;
+    j["fileids"]     = mod.fileids;
+    j["description"] = mod.description;
+    j["iconurl"]     = mod.iconurl;
+    j["modvalid"]    = mod.modvalid;
+}
+
+void from_json(const nlohmann::json &j, CurseMetaMod &mod)
+{
+    j["addonname"].get_to(mod.addonid);
+    j["addonid"].get_to(mod.addonid);
+    j["fileids"].get_to(mod.fileids);
+    j["description"].get_to(mod.description);
+    j["iconurl"].get_to(mod.iconurl);
+    j["modvalid"].get_to(mod.modvalid);
+}
+
+void from_json(const nlohmann::json &j, CurseMetaMcVersion &mcversion)
+{
+    j["versionString"].get_to(mcversion.version);
+    j["approved"].get_to(mcversion.approved);
+    j["dateModified"].get_to(mcversion.dateModified);
+}
+
+void from_json(const nlohmann::json &j, CurseMetaForge &forgeversion)
+{
+    j["name"].get_to(forgeversion.name);
+    j["gameVersion"].get_to(forgeversion.mcversion);
+    j["dateModified"].get_to(forgeversion.dateModified);
+    j["latest"].get_to(forgeversion.latest);
+    j["recommended"].get_to(forgeversion.recommended);
 }
