@@ -11,7 +11,7 @@ struct CurseMetaMod {
     using FileId = std::tuple<int, std::string>;
 
     std::string       addonname;
-    int               addonid;
+    int               addonid = 0;
     std::list<FileId> fileids;
     std::string       description;
     std::string       iconurl;

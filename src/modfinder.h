@@ -10,6 +10,8 @@ class ModFinder : public QObject {
     Q_OBJECT
 
 public:
+	friend class ModDataManager;
+	
     struct SearchData {
         std::string projectname;
         std::string projecturl;
